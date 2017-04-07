@@ -78,6 +78,7 @@ public class ThriftyCompiler {
     private static final String NULLABILITY_ARG = "--use-android-annotations";
     private static final String PARCELABLE_ARG = "--parcelable";
     private static final String JAVA_NAMES_ARG = "--use-java-style-names";
+    private static final String SKIP_OBJECT_BUILDERS = "--skip-object-builders";
 
     private Path outputDirectory;
     private List<Path> thriftFiles = new ArrayList<>();
@@ -87,6 +88,7 @@ public class ThriftyCompiler {
     private String mapTypeName;
     private boolean emitNullabilityAnnotations = false;
     private boolean emitParcelable = false;
+    private boolean skipObjectBuilders = false;
     private FieldNamingPolicy fieldNamingPolicy = FieldNamingPolicy.DEFAULT;
 
     public static void main(String[] args) {
@@ -124,6 +126,8 @@ public class ThriftyCompiler {
                 compiler.emitNullabilityAnnotations = true;
             } else if (arg.trim().equals(PARCELABLE_ARG)) {
                 compiler.emitParcelable = true;
+            } else if (arg.trim().equals(SKIP_OBJECT_BUILDERS)) {
+                compiler.skipObjectBuilders = true;
             } else if (arg.trim().equals(JAVA_NAMES_ARG)) {
                 compiler.fieldNamingPolicy = FieldNamingPolicy.JAVA;
             } else if (arg.startsWith("-")) {
@@ -213,6 +217,7 @@ public class ThriftyCompiler {
 
         gen.emitAndroidAnnotations(emitNullabilityAnnotations);
         gen.emitParcelable(emitParcelable);
+        gen.skipObjectBuilders(skipObjectBuilders);
 
         gen.generate(outputDirectory);
     }

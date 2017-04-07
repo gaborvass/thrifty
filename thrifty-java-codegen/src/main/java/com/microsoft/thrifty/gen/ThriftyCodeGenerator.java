@@ -101,6 +101,7 @@ public final class ThriftyCodeGenerator {
     private boolean emitAndroidAnnotations;
     private boolean emitParcelable;
     private boolean emitFileComment = true;
+    private boolean skipObjectBuilders = true;
 
     public ThriftyCodeGenerator(Schema schema) {
         this(schema, FieldNamingPolicy.DEFAULT);
@@ -165,6 +166,11 @@ public final class ThriftyCodeGenerator {
 
     public ThriftyCodeGenerator emitFileComment(boolean emitFileComment) {
         this.emitFileComment = emitFileComment;
+        return this;
+    }
+
+    public ThriftyCodeGenerator skipObjectBuilders(boolean skipObjectBuilders) {
+        this.skipObjectBuilders = skipObjectBuilders;
         return this;
     }
 
@@ -351,9 +357,15 @@ public final class ThriftyCodeGenerator {
                 .initializer("new $N()", adapterSpec)
                 .build());
 
-        MethodSpec.Builder ctor = MethodSpec.constructorBuilder()
-                .addModifiers(Modifier.PRIVATE)
-                .addParameter(builderTypeName, "builder");
+        MethodSpec.Builder ctor = null;
+        if (skipObjectBuilders) {
+            ctor = MethodSpec.constructorBuilder()
+                                                .addModifiers(Modifier.PUBLIC);
+        } else {
+            ctor = MethodSpec.constructorBuilder()
+                                                .addModifiers(Modifier.PRIVATE)
+                                                .addParameter(builderTypeName, "builder");
+        }
 
         for (Field field : type.fields()) {
 
@@ -363,8 +375,9 @@ public final class ThriftyCodeGenerator {
             TypeName fieldTypeName = typeResolver.getJavaClass(trueType);
 
             // Define field
+            // TODO: add Modifier.FINAL if skipObjectsBuilder is false
             FieldSpec.Builder fieldBuilder = FieldSpec.builder(fieldTypeName, name)
-                    .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+                    .addModifiers(Modifier.PUBLIC)
                     .addAnnotation(fieldAnnotation(field));
 
             if (emitAndroidAnnotations) {
@@ -391,32 +404,33 @@ public final class ThriftyCodeGenerator {
             structBuilder.addField(fieldBuilder.build());
 
             // Update the struct ctor
+            if (!skipObjectBuilders) {
+                CodeBlock.Builder assignment = CodeBlock.builder().add("$[this.$N = ", name);
 
-            CodeBlock.Builder assignment = CodeBlock.builder().add("$[this.$N = ", name);
+                if (trueType.isList()) {
+                    if (!field.required()) {
+                        assignment.add("builder.$N == null ? null : ", name);
+                    }
+                    assignment.add("$T.unmodifiableList(builder.$N)",
+                            TypeNames.COLLECTIONS, name);
+                } else if (trueType.isSet()) {
+                    if (!field.required()) {
+                        assignment.add("builder.$N == null ? null : ", name);
+                    }
+                    assignment.add("$T.unmodifiableSet(builder.$N)",
+                            TypeNames.COLLECTIONS, name);
+                } else if (trueType.isMap()) {
+                    if (!field.required()) {
+                        assignment.add("builder.$N == null ? null : ", name);
+                    }
+                    assignment.add("$T.unmodifiableMap(builder.$N)",
+                            TypeNames.COLLECTIONS, name);
+                } else {
+                    assignment.add("builder.$N", name);
+                }
 
-            if (trueType.isList()) {
-                if (!field.required()) {
-                    assignment.add("builder.$N == null ? null : ", name);
-                }
-                assignment.add("$T.unmodifiableList(builder.$N)",
-                        TypeNames.COLLECTIONS, name);
-            } else if (trueType.isSet()) {
-                if (!field.required()) {
-                    assignment.add("builder.$N == null ? null : ", name);
-                }
-                assignment.add("$T.unmodifiableSet(builder.$N)",
-                        TypeNames.COLLECTIONS, name);
-            } else if (trueType.isMap()) {
-                if (!field.required()) {
-                    assignment.add("builder.$N == null ? null : ", name);
-                }
-                assignment.add("$T.unmodifiableMap(builder.$N)",
-                        TypeNames.COLLECTIONS, name);
-            } else {
-                assignment.add("builder.$N", name);
+                ctor.addCode(assignment.add(";\n$]").build());
             }
-
-            ctor.addCode(assignment.add(";\n$]").build());
         }
 
         structBuilder.addMethod(ctor.build());
@@ -520,92 +534,98 @@ public final class ThriftyCodeGenerator {
             buildMethodBuilder.addStatement("int setFields = 0");
         }
 
-        // Add fields to the struct and set them in the ctor
-        NameAllocator allocator = new NameAllocator();
-        for (Field field : structType.fields()) {
-            String name = fieldNamer.getName(field);
-            allocator.newName(name, name);
-        }
-
-        AtomicInteger tempNameId = new AtomicInteger(0); // used for generating unique names of temporary values
-        for (Field field : structType.fields()) {
-            ThriftType fieldType = field.type().getTrueType();
-            TypeName javaTypeName = typeResolver.getJavaClass(fieldType);
-            String fieldName = fieldNamer.getName(field);
-            FieldSpec.Builder f = FieldSpec.builder(javaTypeName, fieldName, Modifier.PRIVATE);
-
-            if (field.hasJavadoc()) {
-                f.addJavadoc(field.documentation());
+        if (!skipObjectBuilders) {
+            // Add fields to the struct and set them in the ctor
+            NameAllocator allocator = new NameAllocator();
+            for (Field field : structType.fields()) {
+                String name = fieldNamer.getName(field);
+                allocator.newName(name, name);
             }
 
-            if (field.defaultValue() != null) {
-                CodeBlock.Builder initializer = CodeBlock.builder();
-                constantBuilder.generateFieldInitializer(
-                        initializer,
-                        allocator,
-                        tempNameId,
-                        "this." + fieldName,
-                        fieldType.getTrueType(),
-                        field.defaultValue(),
-                        false);
-                defaultCtor.addCode(initializer.build());
+            AtomicInteger tempNameId = new AtomicInteger(0); // used for generating unique names of temporary values
+            for (Field field : structType.fields()) {
+                ThriftType fieldType = field.type().getTrueType();
+                TypeName javaTypeName = typeResolver.getJavaClass(fieldType);
+                String fieldName = fieldNamer.getName(field);
+                FieldSpec.Builder f = FieldSpec.builder(javaTypeName, fieldName, Modifier.PRIVATE);
 
-                resetBuilder.addCode(initializer.build());
-            } else {
-                resetBuilder.addStatement("this.$N = null", fieldName);
+                if (field.hasJavadoc()) {
+                    f.addJavadoc(field.documentation());
+                }
+
+                if (field.defaultValue() != null) {
+                    CodeBlock.Builder initializer = CodeBlock.builder();
+                    constantBuilder.generateFieldInitializer(
+                            initializer,
+                            allocator,
+                            tempNameId,
+                            "this." + fieldName,
+                            fieldType.getTrueType(),
+                            field.defaultValue(),
+                            false);
+                    defaultCtor.addCode(initializer.build());
+
+                    resetBuilder.addCode(initializer.build());
+                } else {
+                    resetBuilder.addStatement("this.$N = null", fieldName);
+                }
+
+                builder.addField(f.build());
+
+                MethodSpec.Builder setterBuilder = MethodSpec.methodBuilder(fieldName)
+                                                             .addModifiers(Modifier.PUBLIC)
+                                                             .returns(builderClassName)
+                                                             .addParameter(javaTypeName, fieldName);
+
+                if (field.required()) {
+                    setterBuilder.beginControlFlow("if ($N == null)", fieldName);
+                    setterBuilder.addStatement(
+                            "throw new $T(\"Required field '$L' cannot be null\")",
+                            NullPointerException.class,
+                            fieldName);
+                    setterBuilder.endControlFlow();
+                }
+
+                setterBuilder
+                        .addStatement("this.$N = $N", fieldName, fieldName)
+                        .addStatement("return this");
+
+                builder.addMethod(setterBuilder.build());
+
+                if (structType.isUnion()) {
+                    buildMethodBuilder
+                            .addStatement("if (this.$N != null) ++setFields", fieldName);
+                } else {
+                    if (field.required()) {
+                        buildMethodBuilder.beginControlFlow("if (this.$N == null)", fieldName);
+                        buildMethodBuilder.addStatement(
+                                "throw new $T($S)",
+                                ClassName.get(IllegalStateException.class),
+                                "Required field '" + fieldName + "' is missing");
+                        buildMethodBuilder.endControlFlow();
+                    }
+                }
+
+                copyCtor.addStatement("this.$N = $N.$N", fieldName, "struct", fieldName);
             }
-
-            builder.addField(f.build());
-
-            MethodSpec.Builder setterBuilder = MethodSpec.methodBuilder(fieldName)
-                    .addModifiers(Modifier.PUBLIC)
-                    .returns(builderClassName)
-                    .addParameter(javaTypeName, fieldName);
-
-            if (field.required()) {
-                setterBuilder.beginControlFlow("if ($N == null)", fieldName);
-                setterBuilder.addStatement(
-                        "throw new $T(\"Required field '$L' cannot be null\")",
-                        NullPointerException.class,
-                        fieldName);
-                setterBuilder.endControlFlow();
-            }
-
-            setterBuilder
-                    .addStatement("this.$N = $N", fieldName, fieldName)
-                    .addStatement("return this");
-
-            builder.addMethod(setterBuilder.build());
 
             if (structType.isUnion()) {
                 buildMethodBuilder
-                        .addStatement("if (this.$N != null) ++setFields", fieldName);
-            } else {
-                if (field.required()) {
-                    buildMethodBuilder.beginControlFlow("if (this.$N == null)", fieldName);
-                    buildMethodBuilder.addStatement(
-                            "throw new $T($S)",
-                            ClassName.get(IllegalStateException.class),
-                            "Required field '" + fieldName + "' is missing");
-                    buildMethodBuilder.endControlFlow();
-                }
+                        .beginControlFlow("if (setFields != 1)")
+                        .addStatement(
+                                "throw new $T($S + setFields + $S)",
+                                ClassName.get(IllegalStateException.class),
+                                "Invalid union; ",
+                                " field(s) were set")
+                        .endControlFlow();
             }
-
-            copyCtor.addStatement("this.$N = $N.$N", fieldName, "struct", fieldName);
         }
 
-        if (structType.isUnion()) {
-            buildMethodBuilder
-                    .beginControlFlow("if (setFields != 1)")
-                    .addStatement(
-                            "throw new $T($S + setFields + $S)",
-                            ClassName.get(IllegalStateException.class),
-                            "Invalid union; ",
-                            " field(s) were set")
-                    .endControlFlow();
+        if (skipObjectBuilders) {
+            buildMethodBuilder.addStatement("return new $T()", structClassName);
+        } else {
+            buildMethodBuilder.addStatement("return new $T(this)", structClassName);
         }
-
-        buildMethodBuilder.addStatement("return new $T(this)", structClassName);
         builder.addMethod(defaultCtor.build());
         builder.addMethod(copyCtor.build());
         builder.addMethod(buildMethodBuilder.build());
@@ -648,6 +668,9 @@ public final class ThriftyCodeGenerator {
         write.addStatement("protocol.writeStructBegin($S)", structType.name());
 
         // Then, the reader - set up the field-reading loop.
+        if (skipObjectBuilders) {
+            read.addStatement(structType.name() + " retValue = new " + structType.name() + "()");
+        }
         read.addStatement("protocol.readStructBegin()");
         read.beginControlFlow("while (true)");
         read.addStatement("$T field = protocol.readFieldBegin()", TypeNames.FIELD_METADATA);
@@ -694,7 +717,7 @@ public final class ThriftyCodeGenerator {
 
             // Read
             read.beginControlFlow("case $L:", field.id());
-            new GenerateReaderVisitor(typeResolver, read, fieldName, field.type().getTrueType()).generate();
+            new GenerateReaderVisitor(typeResolver, read, fieldName, field.type().getTrueType(), skipObjectBuilders).generate();
             read.endControlFlow(); // end case block
             read.addStatement("break");
         }
@@ -713,7 +736,11 @@ public final class ThriftyCodeGenerator {
         read.addStatement("protocol.readFieldEnd()");
         read.endControlFlow(); // end while
         read.addStatement("protocol.readStructEnd()");
-        read.addStatement("return builder.build()");
+        if (skipObjectBuilders) {
+            read.addStatement("return retValue");
+        } else {
+            read.addStatement("return builder.build()");
+        }
 
         return TypeSpec.classBuilder(structType.name() + "Adapter")
                 .addSuperinterface(adapterSuperclass)

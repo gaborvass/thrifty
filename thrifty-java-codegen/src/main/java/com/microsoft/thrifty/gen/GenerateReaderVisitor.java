@@ -59,12 +59,21 @@ class GenerateReaderVisitor implements ThriftType.Visitor<Void> {
     private String fieldName;
     private ThriftType fieldType;
     private int scope;
+    private boolean skipObjectBuilders = false;
 
     GenerateReaderVisitor(TypeResolver resolver, MethodSpec.Builder read, String fieldName, ThriftType fieldType) {
         this.resolver = resolver;
         this.read = read;
         this.fieldName = fieldName;
         this.fieldType = fieldType;
+    }
+
+    GenerateReaderVisitor(TypeResolver resolver, MethodSpec.Builder read, String fieldName, ThriftType fieldType, boolean skipObjectBuilders) {
+        this.resolver = resolver;
+        this.read = read;
+        this.fieldName = fieldName;
+        this.fieldType = fieldType;
+        this.skipObjectBuilders = skipObjectBuilders;
     }
 
     void generate() {
@@ -89,7 +98,11 @@ class GenerateReaderVisitor implements ThriftType.Visitor<Void> {
     }
 
     protected void useReadValue(String localName) {
-        read.addStatement("builder.$N($N)", fieldName, localName);
+        if (skipObjectBuilders) {
+            read.addStatement("retValue.$N = $N", fieldName, localName);
+        } else {
+            read.addStatement("builder.$N($N)", fieldName, localName);
+        }
     }
 
     @Override

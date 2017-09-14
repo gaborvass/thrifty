@@ -87,7 +87,7 @@ subprojects { sp ->
     }
 
     tasks.withType(Checkstyle) {
-        exclude '**/antlr/**'
+        exclude '**/*'
     }
 
     tasks.withType(JavaCompile) {

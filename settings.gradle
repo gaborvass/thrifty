@@ -6,5 +6,5 @@ include 'thrifty-compiler'
 include 'thrifty-example-postprocessor'
 include 'thrifty-compiler-plugins'
 include 'thrifty-test-server'
-include 'thrifty-integration-tests'
+//include 'thrifty-integration-tests'
 

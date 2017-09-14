@@ -280,7 +280,8 @@ class GenerateReaderVisitor implements ThriftType.Visitor<Void> {
     @Override
     public Void visitStruct(StructType userType) {
         String qualifiedJavaName = getFullyQualifiedJavaName(userType);
-        read.addStatement("$1L $2N = $1L.ADAPTER.read(protocol)", qualifiedJavaName, nameStack.peek());
+        //read.addStatement("$1L $2N = $1L.ADAPTER.read(protocol)", qualifiedJavaName, nameStack.peek());
+        read.addStatement("$1L $2N = $1L.read(protocol)", qualifiedJavaName, nameStack.peek());
         return null;
     }
 

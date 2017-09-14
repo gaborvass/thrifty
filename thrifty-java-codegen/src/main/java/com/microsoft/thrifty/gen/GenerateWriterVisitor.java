@@ -261,7 +261,8 @@ class GenerateWriterVisitor implements ThriftType.Visitor<Void> {
     @Override
     public Void visitStruct(StructType structType) {
         String javaName = structType.getNamespaceFor(NamespaceScope.JAVA) + "." + structType.name();
-        write.addStatement("$L.ADAPTER.write($N, $L)", javaName, proto, nameStack.peek());
+        //write.addStatement("$L.ADAPTER.write($N, $L)", javaName, proto, nameStack.peek());
+        write.addStatement("$L.write($N, $L)", javaName, proto, nameStack.peek());
         return null;
     }
 

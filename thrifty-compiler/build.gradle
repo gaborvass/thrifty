@@ -24,6 +24,10 @@ dependencies {
     implementation project(':thrifty-compiler-plugins')
 }
 
+task wrapper(type: Wrapper) {
+    gradleVersion = '3.0' //version required
+}
+
 sourceSets {
     main {
         java {
@@ -47,19 +51,19 @@ jar {
     }
 }
 
-task compileTestCase(type: Exec) {
-    def jarTask = project.tasks['jar'] as Jar
-
-    dependsOn jarTask
-
-    executable 'java'
-    args = ['-jar', jarTask.archivePath.absolutePath, "--use-java-style-names", "--out=$projectDir/build/generated-src/gen/java", "$projectDir/TestThrift.thrift"]
-}
-
-afterEvaluate {
-    if (project.tasks.getByName('compileTestCase') != null) {
-        project.tasks['compileJava'].dependsOn project.tasks.create('deleteTestCaseJava', Delete) {
-            delete "$projectDir/build/generated-src/gen"
-        }
-    }
-}
+//task compileTestCase(type: Exec) {
+//    def jarTask = project.tasks['jar'] as Jar
+//
+//    dependsOn jarTask
+//
+//    executable 'java'
+//    args = ['-jar', jarTask.archivePath.absolutePath, "--use-java-style-names", "--out=$projectDir/build/generated-src/gen/java", "$projectDir/TestThrift.thrift"]
+//}
+//
+//afterEvaluate {
+//    if (project.tasks.getByName('compileTestCase') != null) {
+//        project.tasks['compileJava'].dependsOn project.tasks.create('deleteTestCaseJava', Delete) {
+//            delete "$projectDir/build/generated-src/gen"
+//        }
+//    }
+//}

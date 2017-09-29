@@ -73,6 +73,16 @@ public interface UserElement {
     boolean isDeprecated();
 
     /**
+     * Gets a value indicating whether the element has been marked as
+     * sdk related; this may or may not be meaningful, depending on the
+     * particular type of element.
+     * annotation is @sdk
+     *
+     * @return true if this element has been marked as sdk related.
+     */
+    boolean isSdkRelated();
+
+    /**
      * Returns {@code true} if {@code doc} is non-empty Javadoc, otherwise
      * {@code false}.
      */

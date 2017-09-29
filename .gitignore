@@ -9,3 +9,10 @@ local.properties
 
 # Gradle AutoValue plugin deposits generated sources in roots named "auto-value"
 auto-value/
+thrifty-java-codegen/out
+thrifty-runtime/out
+thrifty-schema/out
+thrifty-test-server/out
+thrifty-compiler-plugins/out
+thrifty-compiler/out
+thrifty-example-postprocessor/out

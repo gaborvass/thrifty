@@ -40,6 +40,7 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
+import javax.annotation.Nullable;
 import javax.lang.model.element.Modifier;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -74,6 +75,11 @@ final class ServiceBuilder {
         }
 
         for (ServiceMethod method : service.methods()) {
+            // skip if not sdk related
+            if (! method.isSdkRelated()) {
+                continue;
+            }
+
             NameAllocator allocator = new NameAllocator();
             int tag = 0;
 
@@ -141,7 +147,12 @@ final class ServiceBuilder {
 
         int i = 0;
         for (MethodSpec methodSpec : serviceInterface.methodSpecs) {
-            ServiceMethod serviceMethod = service.methods().get(i++);
+            ServiceMethod serviceMethod = service.methods().get(i);
+            // skip if not sdk related
+            if (! serviceMethod.isSdkRelated()) {
+                continue;
+            }
+            i++;
             TypeSpec call = buildCallSpec(serviceMethod);
             builder.addType(call);
 

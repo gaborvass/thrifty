@@ -207,6 +207,10 @@ public final class ThriftyCodeGenerator {
         ImmutableList.Builder<JavaFile> generatedTypes = ImmutableList.builder();
 
         for (EnumType type : schema.enums()) {
+            // skip type which are not sdk related
+            if (!type.isSdkRelated()) {
+                continue;
+            }
             TypeSpec spec = buildEnum(type);
             JavaFile file = assembleJavaFile(type, spec);
             if (file != null) {
@@ -215,6 +219,10 @@ public final class ThriftyCodeGenerator {
         }
 
         for (StructType type : schema.structs()) {
+            // skip type which are not sdk related
+            if (!type.isSdkRelated()) {
+                continue;
+            }
             TypeSpec spec = buildStruct(type);
             JavaFile file = assembleJavaFile(type, spec);
             if (file != null) {
@@ -223,6 +231,10 @@ public final class ThriftyCodeGenerator {
         }
 
         for (StructType type : schema.exceptions()) {
+            // skip type which are not sdk related
+            if (!type.isSdkRelated()) {
+                continue;
+            }
             TypeSpec spec = buildStruct(type);
             JavaFile file = assembleJavaFile(type, spec);
             if (file != null) {
@@ -231,6 +243,10 @@ public final class ThriftyCodeGenerator {
         }
 
         for (StructType type : schema.unions()) {
+            // skip type which are not sdk related
+            if (!type.isSdkRelated()) {
+                continue;
+            }
             TypeSpec spec = buildStruct(type);
             JavaFile file = assembleJavaFile(type, spec);
             if (file != null) {
@@ -1103,6 +1119,10 @@ public final class ThriftyCodeGenerator {
         final AtomicBoolean hasStaticInit = new AtomicBoolean(false);
 
         for (final Constant constant : constants) {
+            // skip generation if not sdk related
+            if (!constant.isDeprecated()) {
+                continue;
+            }
             final ThriftType type = constant.type().getTrueType();
 
             TypeName javaType = typeResolver.getJavaClass(type);
@@ -1235,6 +1255,7 @@ public final class ThriftyCodeGenerator {
     @VisibleForTesting
     @SuppressWarnings("WeakerAccess")
     TypeSpec buildEnum(EnumType type) {
+
         ClassName enumClassName = ClassName.get(
                 type.getNamespaceFor(NamespaceScope.JAVA),
                 type.name());

@@ -104,6 +104,11 @@ public class Constant implements UserElement {
         return mixin.isDeprecated();
     }
 
+    @Override
+    public boolean isSdkRelated() {
+        return mixin.isSdkRelated();
+    }
+
     public ImmutableMap<NamespaceScope, String> namespaces() {
         return namespaces;
     }

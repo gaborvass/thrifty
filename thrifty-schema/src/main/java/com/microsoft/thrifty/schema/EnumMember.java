@@ -76,6 +76,11 @@ public class EnumMember implements UserElement {
     }
 
     @Override
+    public boolean isSdkRelated() {
+        return mixin.isSdkRelated();
+    }
+
+    @Override
     public String toString() {
         return name();
     }

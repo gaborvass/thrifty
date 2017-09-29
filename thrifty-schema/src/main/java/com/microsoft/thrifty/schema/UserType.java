@@ -88,6 +88,11 @@ public abstract class UserType extends ThriftType implements UserElement {
     }
 
     @Override
+    public boolean isSdkRelated() {
+        return mixin.isSdkRelated();
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (!super.equals(o)) return false;
 

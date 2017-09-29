@@ -103,6 +103,11 @@ public class ServiceMethod implements UserElement {
         return mixin.isDeprecated();
     }
 
+    @Override
+    public boolean isSdkRelated() {
+        return mixin.isSdkRelated();
+    }
+
     public Builder toBuilder() {
         return new Builder(this);
     }

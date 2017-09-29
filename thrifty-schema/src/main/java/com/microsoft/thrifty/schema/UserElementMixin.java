@@ -122,6 +122,11 @@ class UserElementMixin implements UserElement {
         return hasThriftOrJavadocAnnotation("deprecated");
     }
 
+    @Override
+    public boolean isSdkRelated() {
+        return documentationContains("#sdk");
+    }
+
     /**
      * Checks for the presence of the given annotation name, in several possible
      * varieties.  Returns true if:
@@ -139,6 +144,10 @@ class UserElementMixin implements UserElement {
         return annotations().containsKey(name)
                 || annotations().containsKey("thrifty." + name)
                 || (hasJavadoc() && documentation().toLowerCase(Locale.US).contains("@" + name));
+    }
+
+    boolean documentationContains(String name) {
+        return documentation().toLowerCase(Locale.US).contains(name);
     }
 
     @Override

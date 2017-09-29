@@ -47,6 +47,7 @@ public class EnumType extends UserType {
         this.members = builder.members;
     }
 
+
     public ImmutableList<EnumMember> members() {
         return members;
     }
